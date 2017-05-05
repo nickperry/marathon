@@ -52,11 +52,26 @@ trait AuthDirectives extends AkkaDirectives {
     * @param action The action for which to check authorization for the given identity
     * @param action The entity for which authorization should be checked
     */
-  def authorized[Resource](action: AuthorizedAction[Resource], resource: Resource)(implicit authorizer: Authorizer, identity: Identity): Directive0 =
+  def authorized[Resource](action: AuthorizedAction[Resource], resource: Resource, onFailure: Rejection)(implicit authorizer: Authorizer, identity: Identity): Directive0 =
     if (authorizer.isAuthorized(identity, action, resource))
       pass
     else
-      reject(NotAuthorized(toResponse(authorizer.handleNotAuthorized(identity, _))))
+      reject(onFailure)
+
+  def authorized[Resource](action: AuthorizedAction[Resource], resource: Resource)(implicit authorizer: Authorizer, identity: Identity): Directive0 =
+    authorized[Resource](action, resource, NotAuthorized(toResponse(authorizer.handleNotAuthorized(identity, _))))
+
+  /**
+    * Like authorized, but returns an Either rather than a directive
+    */
+  def checkAuthorization[T, Resource <: T](action: AuthorizedAction[T], resource: Resource)(
+    implicit
+    authorizer: Authorizer, identity: Identity): Either[Rejection, Resource] =
+    if (authorizer.isAuthorized(identity, action, resource))
+      Right(resource)
+    else
+      Left(NotAuthorized(toResponse(authorizer.handleNotAuthorized(identity, _))))
+
 }
 
 object AuthDirectives {
@@ -64,9 +79,11 @@ object AuthDirectives {
   trait ToResponse {
     // TODO - MARATHON-7319 actually implement this!
   }
-  private[AuthDirectives] case object AuthServiceUnavailable extends Rejection
-  private[AuthDirectives] case class NotAuthorized(toResponse: ToResponse) extends Rejection
-  private[AuthDirectives] case class NotAuthenticated(toResponse: ToResponse) extends Rejection
+
+  case class ToResponseString(msg: String) extends ToResponse
+  case object AuthServiceUnavailable extends Rejection
+  case class NotAuthorized(toResponse: ToResponse) extends Rejection
+  case class NotAuthenticated(toResponse: ToResponse) extends Rejection
 
   def handleAuthRejections: PartialFunction[Rejection, Route] = {
     // TODO - MARATHON-7319 actually implement these!
