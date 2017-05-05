@@ -16,7 +16,7 @@ class IntegrationHealthCheck(val appId: PathId, val versionId: String, val port:
   case class HealthStatusChange(deadLine: Deadline, state: Boolean)
   private[this] var changes = List.empty[HealthStatusChange]
   private[this] var healthAction = (check: IntegrationHealthCheck) => {}
-  val pinged = new AtomicBoolean(false)
+  val pinged = new AtomicBoolean(state)
 
   def afterDelay(delay: FiniteDuration, state: Boolean): Unit = {
     val item = HealthStatusChange(delay.fromNow, state)
