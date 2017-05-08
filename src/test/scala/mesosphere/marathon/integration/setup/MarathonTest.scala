@@ -92,6 +92,7 @@ case class LocalMarathon(
     "http_port" -> httpPort.toString,
     "zk" -> zkUrl,
     "zk_timeout" -> 20.seconds.toMillis.toString,
+    "zk_connection_timeout" -> 20.seconds.toMillis.toString,
     "zk_session_timeout" -> 20.seconds.toMillis.toString,
     "mesos_authentication_secret_file" -> s"$secretPath",
     "access_control_allow_origin" -> "*",
@@ -292,7 +293,7 @@ trait MarathonTest extends StrictLogging with ScalaFutures with Eventually {
   }
 
   def appProxyHealthCheck(
-    gracePeriod: FiniteDuration = 3.seconds,
+    gracePeriod: FiniteDuration = 1.seconds,
     interval: FiniteDuration = 1.second,
     maxConsecutiveFailures: Int = Int.MaxValue,
     portIndex: Option[Int] = Some(0)): AppHealthCheck =
@@ -412,7 +413,7 @@ trait MarathonTest extends StrictLogging with ScalaFutures with Eventually {
   }
 
   def waitForHealthCheck(check: IntegrationHealthCheck, maxWait: FiniteDuration = patienceConfig.timeout.toMillis.millis) = {
-    WaitTestSupport.waitUntil("Health check to get queried", maxWait) { check.pinged }
+    WaitTestSupport.waitUntil("Health check to get queried", maxWait) { check.pinged.get }
   }
 
   def waitForDeploymentId(deploymentId: String, maxWait: FiniteDuration = patienceConfig.timeout.toMillis.millis): CallbackEvent = {
