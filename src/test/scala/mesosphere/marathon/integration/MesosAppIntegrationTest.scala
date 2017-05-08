@@ -1,6 +1,7 @@
 package mesosphere.marathon
 package integration
 
+import java.net.URLEncoder
 import java.util.concurrent.atomic.AtomicInteger
 
 import mesosphere.marathon.core.health.{ MesosHttpHealthCheck, PortReference }
@@ -123,7 +124,7 @@ class MesosAppIntegrationTest extends AkkaIntegrationTest with EmbeddedMarathonT
       val containerDir = "/opt/marathon"
 
       def appMockCommand(port: String) = """echo APP PROXY $$MESOS_TASK_ID RUNNING; /opt/marathon/python/app_mock.py """ +
-        s"""$port $podId v1 http://127.0.0.1:${healthEndpoint.localAddress.getPort}/health$podId/v1"""
+        s"""$port $podId v1 ${healthEndpointFor(podId, "v1")}"""
 
       val pod = PodDefinition(
         id = podId,

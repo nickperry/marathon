@@ -308,6 +308,18 @@ trait MarathonTest extends StrictLogging with ScalaFutures with Eventually {
     def toTestPath: PathId = testBasePath.append(path)
   }
 
+  /**
+    * Constructs the proper health proxy endpoint argument for the Python app mock.
+    *
+    * @param appId The app id whose health is checked
+    * @param versionId The version of the app
+    * @return URL to health check endpoint
+    */
+  def healthEndpointFor(appId: PathId, versionId: String): String = {
+    val encodedAppId = URLEncoder.encode(appId.toString, "UTF-8")
+    s"http://127.0.0.1:${healthEndpoint.localAddress.getPort}/$encodedAppId/$versionId"
+  }
+
   def appProxyHealthCheck(
     gracePeriod: FiniteDuration = 1.seconds,
     interval: FiniteDuration = 1.second,
@@ -327,9 +339,8 @@ trait MarathonTest extends StrictLogging with ScalaFutures with Eventually {
 
     val projectDir = sys.props.getOrElse("user.dir", ".")
     val appMock: File = new File(projectDir, "src/test/python/app_mock.py")
-    val encodedAppId = URLEncoder.encode(appId.toString, "UTF-8")
     val cmd = Some(s"""echo APP PROXY $$MESOS_TASK_ID RUNNING; ${appMock.getAbsolutePath} """ +
-      s"""$$PORT0 $appId $versionId  http://127.0.0.1:${healthEndpoint.localAddress.getPort}/$encodedAppId/$versionId""")
+      s"""$$PORT0 $appId $versionId ${healthEndpointFor(appId, versionId)}""")
 
     App(
       id = appId.toString,
@@ -346,9 +357,8 @@ trait MarathonTest extends StrictLogging with ScalaFutures with Eventually {
     val projectDir = sys.props.getOrElse("user.dir", ".")
     val containerDir = "/opt/marathon"
 
-    val encodedAppId = URLEncoder.encode(appId.toString, "UTF-8")
     val cmd = Some("""echo APP PROXY $$MESOS_TASK_ID RUNNING; /opt/marathon/python/app_mock.py """ +
-      s"""$$PORT0 $appId $versionId http://127.0.0.1:${healthEndpoint.localAddress.getPort}/$encodedAppId/$versionId""")
+      s"""$$PORT0 ${healthEndpointFor(appId, versionId)}""")
 
     App(
       id = appId.toString,
