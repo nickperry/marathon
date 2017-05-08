@@ -17,7 +17,7 @@ class IntegrationReadinessCheck(val appId: PathId, val versionId: String) extend
     * Query readiness.
     * @return Whether app is supposed to be ready or not.
     */
-  def call: Boolean = {
+  def call(): Boolean = {
     val state = isReady.get
     wasCalled.set(true)
     logger.info(s"Got readiness check call from: app=$appId -> $state")
