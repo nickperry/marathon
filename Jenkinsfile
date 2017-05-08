@@ -6,10 +6,15 @@ ansiColor('gnome-terminal') {
       checkout scm
     }
     stage("Build and Test") {
-     sh """sudo -E sbt clean \
-       coverage testWithCoverageReport \
-       integration:test\
-       """
+      sh """sudo -E sbt clean \
+        coverage testWithCoverageReport \
+        integration:test\
+        """
+    }
+    stage("Package and Publish") {
+      sh """sudo sudo -E sbt clean \
+        packageAll
+        """
     }
   }
 }
