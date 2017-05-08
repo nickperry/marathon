@@ -357,8 +357,9 @@ trait MarathonTest extends StrictLogging with ScalaFutures with Eventually {
     val projectDir = sys.props.getOrElse("user.dir", ".")
     val containerDir = "/opt/marathon"
 
+    val encodedAppId = URLEncoder.encode(appId.toString, "UTF-8")
     val cmd = Some("""echo APP PROXY $$MESOS_TASK_ID RUNNING; /opt/marathon/python/app_mock.py """ +
-      s"""$$PORT0 ${healthEndpointFor(appId, versionId)}""")
+      s"""$$PORT0 $appId $versionId ${healthEndpointFor(appId, versionId)}""")
 
     App(
       id = appId.toString,

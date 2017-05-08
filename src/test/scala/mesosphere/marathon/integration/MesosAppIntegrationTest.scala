@@ -1,7 +1,6 @@
 package mesosphere.marathon
 package integration
 
-import java.net.URLEncoder
 import java.util.concurrent.atomic.AtomicInteger
 
 import mesosphere.marathon.core.health.{ MesosHttpHealthCheck, PortReference }
