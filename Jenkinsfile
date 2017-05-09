@@ -10,7 +10,7 @@ ansiColor('gnome-terminal') {
      sh "sudo -E sbt ci"
     }
     stage("Package and Publish") {
-     sh """sudo rm -f target/packages/* && sudo sbt clean packageAll"""
+      sh "sudo /usr/local/bin/amm scripts/package.sc"
     }
   }
 }
