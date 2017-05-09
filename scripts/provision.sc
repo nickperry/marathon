@@ -42,7 +42,7 @@ def installMesos(): Unit = {
 def killJunkProcesses(): Unit = {
   val stuffToKill = %%('ps, 'aux).out.lines.filter { proc =>
     (proc.contains("app_mock") || proc.contains("mesos") || proc.contains("java")) &&
-      !(proc.contains("slave.jar") || proc.contains("grep") || proc.contains("kill_stale_test_processes.sc"))
+      !(proc.contains("slave.jar") || proc.contains("grep") || proc.contains("provision.sc"))
   }
 
 
