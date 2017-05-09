@@ -52,7 +52,8 @@ def killJunkProcesses(): Unit = {
   } else {
     println("This requires root permissions. If you run this on a workstation it'll kill more than you expect.")
     println()
-    println(s"Will kill $stuffToKill")
+    println(s"Will kill:")
+    stuffToKill.foreach( p => println(s"  $p"))
 
     val pidPattern = """([^\s]+)\s+([^\s]+)\s+.*""".r
 
