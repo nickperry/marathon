@@ -263,6 +263,7 @@ addCommandAlias("packageRpm",  ";set serverLoading in Rpm := com.typesafe.sbt.pa
   ";set serverLoading in Rpm := com.typesafe.sbt.packager.archetypes.ServerLoader.Systemd" +
   ";packageRpmSystemd")
 
+addCommandAlias("ci", ";clean; coverage; testWithCoverageReport; integration:test; scapegoat")
 
 lazy val `plugin-interface` = (project in file("plugin-interface"))
     .enablePlugins(GitBranchPrompt, CopyPasteDetector, BasicLintingPlugin, TestWithCoveragePlugin)
