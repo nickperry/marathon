@@ -9,11 +9,12 @@ ansiColor('gnome-terminal') {
     }
     stage("Build and Test") {
      sh """sudo -E sbt clean \
-        coverage testWithCoverageReport \
-        integration:test \
-        scapegoat"""
+               coverage testWithCoverageReport \
+               integration:test \
+               scapegoat
+        """
     }
-    stage("Package") {
+    stage("Package and Publish") {
      sh """sudo rm -f target/packages/* && sudo sbt clean packageAll"""
     }
   }
