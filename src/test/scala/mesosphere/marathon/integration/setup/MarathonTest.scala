@@ -195,48 +195,13 @@ case class LocalMarathon(
   }
 }
 
-/**
-  * Base trait for tests that need a marathon
-  */
-trait MarathonTest extends StrictLogging with ScalaFutures with Eventually {
-  def marathonUrl: String
-  def marathon: MarathonFacade
-  def leadingMarathon: Future[LocalMarathon]
-  def mesos: MesosFacade
-  val testBasePath: PathId
-  def suiteName: String
+trait HealthCheckEndpoint extends StrictLogging with ScalaFutures {
 
-  val appProxyIds = Lock(mutable.ListBuffer.empty[String])
+  protected val healthChecks = Lock(mutable.ListBuffer.empty[IntegrationHealthCheck])
+  protected val readinessChecks = Lock(mutable.ListBuffer.empty[IntegrationReadinessCheck])
 
   implicit val system: ActorSystem
   implicit val mat: Materializer
-  implicit val ctx: ExecutionContext
-  implicit val scheduler: Scheduler
-
-  case class CallbackEvent(eventType: String, info: Map[String, Any])
-  object CallbackEvent {
-    def apply(event: ITEvent): CallbackEvent = CallbackEvent(event.eventType, event.info)
-  }
-
-  implicit class CallbackEventToStatusUpdateEvent(val event: CallbackEvent) {
-    def taskStatus: String = event.info.get("taskStatus").map(_.toString).getOrElse("")
-    def message: String = event.info("message").toString
-    def id: String = event.info("id").toString
-    def running: Boolean = taskStatus == "TASK_RUNNING"
-    def finished: Boolean = taskStatus == "TASK_FINISHED"
-    def failed: Boolean = taskStatus == "TASK_FAILED"
-  }
-
-  object StatusUpdateEvent {
-    def unapply(event: CallbackEvent): Option[CallbackEvent] = {
-      if (event.eventType == "status_update_event") Some(event)
-      else None
-    }
-  }
-
-  protected val events = new ConcurrentLinkedQueue[ITSSEEvent]()
-  protected val healthChecks = Lock(mutable.ListBuffer.empty[IntegrationHealthCheck])
-  protected val readinessChecks = Lock(mutable.ListBuffer.empty[IntegrationReadinessCheck])
 
   /**
     * Note! This is declared as lazy in order to prevent eager evaluation of values on which it depends
@@ -298,6 +263,83 @@ trait MarathonTest extends StrictLogging with ScalaFutures with Eventually {
     logger.info(s"Listening for health events on $port")
     server
   }
+
+  /**
+    * Add an integration health check to internal health checks. The integration health check is used to control the
+    * health check replies for our app mock.
+    *
+    * @param appId The app id of the app mock
+    * @param versionId The version of the app mock
+    * @param state The initial health status of the app mock
+    * @return The IntegrationHealthCheck object which is used to control the replies.
+    */
+  def appProxyHealthCheck(appId: PathId, versionId: String, state: Boolean): IntegrationHealthCheck = {
+    val check = new IntegrationHealthCheck(appId, versionId, state)
+    healthChecks { checks =>
+      checks.filter(c => c.appId == appId && c.versionId == versionId).foreach(checks -= _)
+      checks += check
+    }
+    check
+  }
+
+  /**
+    * Adds an integration readiness check to internal readiness checks. The behaviour is similar to integration health
+    * checks.
+    *
+    * @param appId The app id of the app mock
+    * @param versionId The version of the app mock
+    * @return The IntegrationReadinessCheck object which is used to control replies.
+    */
+  def appProxyReadinessCheck(appId: PathId, versionId: String): IntegrationReadinessCheck = {
+    val check = new IntegrationReadinessCheck(appId, versionId)
+    readinessChecks { checks =>
+      checks.filter(c => c.appId == appId && c.versionId == versionId).foreach(checks -= _)
+      checks += check
+    }
+    check
+  }
+}
+
+/**
+  * Base trait for tests that need a marathon
+  */
+trait MarathonTest extends HealthCheckEndpoint with StrictLogging with ScalaFutures with Eventually {
+  def marathonUrl: String
+  def marathon: MarathonFacade
+  def leadingMarathon: Future[LocalMarathon]
+  def mesos: MesosFacade
+  val testBasePath: PathId
+  def suiteName: String
+
+  val appProxyIds = Lock(mutable.ListBuffer.empty[String])
+
+  implicit val system: ActorSystem
+  implicit val mat: Materializer
+  implicit val ctx: ExecutionContext
+  implicit val scheduler: Scheduler
+
+  case class CallbackEvent(eventType: String, info: Map[String, Any])
+  object CallbackEvent {
+    def apply(event: ITEvent): CallbackEvent = CallbackEvent(event.eventType, event.info)
+  }
+
+  implicit class CallbackEventToStatusUpdateEvent(val event: CallbackEvent) {
+    def taskStatus: String = event.info.get("taskStatus").map(_.toString).getOrElse("")
+    def message: String = event.info("message").toString
+    def id: String = event.info("id").toString
+    def running: Boolean = taskStatus == "TASK_RUNNING"
+    def finished: Boolean = taskStatus == "TASK_FINISHED"
+    def failed: Boolean = taskStatus == "TASK_FAILED"
+  }
+
+  object StatusUpdateEvent {
+    def unapply(event: CallbackEvent): Option[CallbackEvent] = {
+      if (event.eventType == "status_update_event") Some(event)
+      else None
+    }
+  }
+
+  protected val events = new ConcurrentLinkedQueue[ITSSEEvent]()
 
   protected[setup] def killAppProxies(): Unit = {
     val PIDRE = """^\s*(\d+)\s+(.*)$""".r
@@ -436,41 +478,6 @@ trait MarathonTest extends StrictLogging with ScalaFutures with Eventually {
     }
 
     logger.info("CLEAN UP finished !!!!!!!!!")
-  }
-
-  /**
-    * Add an integration health check to internal health checks. The integration health check is used to control the
-    * health check replies for our app mock.
-    *
-    * @param appId The app id of the app mock
-    * @param versionId The version of the app mock
-    * @param state The initial health status of the app mock
-    * @return The IntegrationHealthCheck object which is used to control the replies.
-    */
-  def appProxyHealthCheck(appId: PathId, versionId: String, state: Boolean): IntegrationHealthCheck = {
-    val check = new IntegrationHealthCheck(appId, versionId, state)
-    healthChecks { checks =>
-      checks.filter(c => c.appId == appId && c.versionId == versionId).foreach(checks -= _)
-      checks += check
-    }
-    check
-  }
-
-  /**
-    * Adds an integration readiness check to internal readiness checks. The behaviour is similar to integration health
-    * checks.
-    *
-    * @param appId The app id of the app mock
-    * @param versionId The version of the app mock
-    * @return The IntegrationReadinessCheck object which is used to control replies.
-    */
-  def appProxyReadinessCheck(appId: PathId, versionId: String): IntegrationReadinessCheck = {
-    val check = new IntegrationReadinessCheck(appId, versionId)
-    readinessChecks { checks =>
-      checks.filter(c => c.appId == appId && c.versionId == versionId).foreach(checks -= _)
-      checks += check
-    }
-    check
   }
 
   def waitForHealthCheck(check: IntegrationHealthCheck, maxWait: FiniteDuration = patienceConfig.timeout.toMillis.millis) = {
