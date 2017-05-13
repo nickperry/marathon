@@ -21,8 +21,8 @@ object HttpPluginFacade {
     override def queryParam(name: String): Seq[String] = request.uri.query().filter(_._1 == name).map(_._2)
     override def requestPath: String = request.uri.path.toString()
     override def remoteAddr: String = remoteAddress.toString()
-    override def localAddr: String = "" //TODO: discuss if we really need this
-    override def localPort: Int = 0 //TODO: discuss if we really need this
+    override def localAddr: String = request.uri.authority.host.toString()
+    override def localPort: Int = request.uri.authority.port
   }
 
   /**
@@ -53,10 +53,10 @@ object HttpPluginFacade {
       val cookie = `Set-Cookie`(HttpCookie(name, value, maxAge = Some(maxAge.toLong), secure = secure))
       builder = builder.copy(headers = cookie +: builder.headers)
     }
-    override def body(mediaType: String, bytes: Array[Byte]): Unit = {
-      val contentType = MediaType.parse(mediaType) match {
+    override def body(mediaTypeString: String, bytes: Array[Byte]): Unit = {
+      val contentType = MediaType.parse(mediaTypeString) match {
         case Right(mediaType) => ContentType(mediaType, () => HttpCharsets.`UTF-8`)
-        case Left(errors) => throw new IllegalArgumentException(s"Could not parse $mediaType. $errors")
+        case Left(errors) => throw new IllegalArgumentException(s"Could not parse $mediaTypeString. $errors")
       }
       builder = builder.copy(entity = HttpEntity(contentType, bytes))
     }
