@@ -3,6 +3,7 @@
 import ammonite.ops._
 import ammonite.ops.ImplicitWd._
 
+import $file.phabricator
 import $file.provision
 
 @main
@@ -28,4 +29,6 @@ def jenkins(): Unit = {
   provision.installMesos()
 
   compileAndTest()
+
+  phabricator.reportSuccess()
 }
